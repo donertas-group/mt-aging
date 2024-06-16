@@ -1,0 +1,5 @@
+
+UKBiobank ukb_unpack_lx (c) CTSU. Compiled Mar 14 2018 14:21:31.
+
+File names must be 1-64 characters long
+usage: ukb_unpack encrypted-file keyfile|password
