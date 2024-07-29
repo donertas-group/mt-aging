@@ -84,7 +84,7 @@ mydf2 %>%
   mutate(walking_pace = setNames(c(NA, NA, 1, 2, 3), 
                                  c('None of the above', 'Prefer not to answer', 'Slow pace', 'Steady average pace', 'Brisk pace'))[walking_pace]) %>% 
   melt(measure.vars=setdiff(c(met_fields, 'PC_TFA_Ratio', 'cci'), c('sex'))) %>% 
-  mutate(variable = gsub('age_at_rec', 'Age', variable)) %>% 
+  mutate(variable = gsub('age_at_rec', 'age_int', 'Age', variable)) %>% 
   mutate(variable = factor(variable, levels=c('Age', 'POFA', 'MOFA', 'PC', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
   mutate(walking_pace = as.factor(walking_pace)) %>% 
@@ -92,7 +92,7 @@ mydf2 %>%
   ggdist::stat_halfeye(adjust = .5, width = .3, .width = 0, justification = -.3, normalize='panels', point_colour = NA) + 
   geom_boxplot(width = .1, outlier.shape = NA) +
   gghalves::geom_half_point(aes(color=walking_pace), side = "l", range_scale = .4, alpha = .1, size=.1) +
-  facet_wrap(variable~., scales='free_y', nrow=2) +
+  facet_grid(variable~., scales='free_y', nrow=2) +
   theme_bw() +
   scale_x_discrete(breaks=1:3,
                    labels = c('Slow pace', 'Steady pace', 'Brisk pace')) +
@@ -137,24 +137,43 @@ mydf4 = mydf2 %>%
                                  c('None of the above', 'Prefer not to answer', 'Slow pace', 'Steady average pace', 'Brisk pace'))[walking_pace]) %>% 
   mutate(PC_TFA_Ratio = PC / TFA) %>% 
   select(-sex, -TFA) %>% 
-  mutate_all(as.numeric)
+  mutate_all(as.numeric) %>% 
+  mutate(age_int = cut(age_at_rec, breaks=c(35,40,45,50,55,60,65,70,75)),
+         age_int = as.character(age_int))
 
-combdf = expand.grid(c(health_fields, "cci"), setdiff(colnames(mydf4), c(health_fields, "cci", "age_at_rec")))
+combdf = expand.grid(c(health_fields, "cci"), setdiff(colnames(mydf4), c(health_fields, "cci", "age_at_rec", "age_int")))
 combdf
 
-corrsdf = apply(combdf, 1, function(x){
+corrsdf =
+  apply(combdf, 1, function(x){
   v1 = x[1] %>% as.character()
   v2 = x[2] %>% as.character()
-  cres = cor.test(mydf4[,v1], mydf4[,v2], m='s')
-  
-  c(v1, v2, cres$estimate, cres$p.value)
+  sapply(mydf4$age_int %>% unique, function(y){
+    print(y)
+    mydf5 = filter(mydf4, age_int == y)
+    cres = cor.test(mydf5[,v1], mydf5[,v2], m='s')
+    list('age_int'=y, 'rho'=cres$estimate, 'p.value'=cres$p.value)
+  }) %>% 
+    t() %>% 
+    as.data.frame() %>% 
+    mutate(param=v1, met=v2) 
 }) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  magrittr::set_colnames(c('param', 'met', 'rho', 'p.value')) %>% 
+  melt(measure.vars=c()) %>% 
+  select(-L1) %>% 
   mutate(rho = as.numeric(rho),
          p.value = as.numeric(p.value))
 
+## calculate correlation on age-stratified inds
+corrsdf %>% 
+  filter(met %in% c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')) %>% 
+  ggplot(aes(x=met, y=rho, fill=as.character(age_int))) +
+  geom_bar(stat='identity', position=position_dodge(), color='grey40') +
+  facet_grid(param~., scales='free_y') +
+  scale_fill_manual(name='Age group',
+                    values=RColorBrewer::brewer.pal(8, 'Set2')) +
+  theme_bw() +
+  labs(x='Lipids', y='Spearmans rho')
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/health_params_nmrs_correlation_heatmaps_groupped.png', width=7, height=10)
 
 corrsdf %>% 
   mutate(lab = as.character(round(rho,2))) %>% 

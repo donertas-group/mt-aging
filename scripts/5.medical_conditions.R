@@ -1,6 +1,8 @@
 # association between health parameters and metabolites
 library(tidyverse)
 library(reshape2)
+library(ggsignif)
+library(ggridges)
 
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
 mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
@@ -40,7 +42,13 @@ mydf3 = mydf2 %>%
   left_join(diabetes_df, by='f.eid') %>% 
   replace_na(list(diabetes='healthy')) %>% 
   mutate(PC_TFA_Ratio = PC / TFA) %>% 
-  select(-f.eid)
+  select(-f.eid) %>% 
+  mutate(age_int = cut(age_at_rec, breaks=c(35,40,45,50,55,60,65,70,75)),
+         age_int = as.character(age_int)) 
+
+## TODO: calculate correlation on age-stratified inds
+
+
 
 # stratify by medical condition
 # diabetes
@@ -52,7 +60,7 @@ mydf3 %>%
          diabetes = factor(diabetes, levels=c('Non-diabetic', 'Diabetic')),
          variable = factor(variable, levels=c('Age', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
-  ggplot(aes(x=diabetes, y=value, fill=diabetes)) +
+  ggplot(aes(x=age_int, y=value, fill=diabetes)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   facet_wrap(variable~., scales='free_y', nrow=2) +
   geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = T) +
@@ -60,9 +68,9 @@ mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  # theme(legend.position = 'none') +
   xlab("") + ylab('Value')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_diabetes.png', width=11, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_diabetes.png', width=13, height=4)
 
 p1=mydf3 %>% 
   melt(measure.vars=c('age_at_rec', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')) %>% 
@@ -93,7 +101,7 @@ mydf3 %>%
          variable = factor(variable, levels=c('Age', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
   mutate(weight_change = factor(weight_change, levels=rev(c('Gained weight', 'No change', 'Lost weight')))) %>%
-  ggplot(aes(x=weight_change, y=value, fill=weight_change)) +
+  ggplot(aes(x=age_int, y=value, fill=weight_change)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   geom_signif(test="wilcox.test", comparisons = combn(c('Gained weight', 'No change', 'Lost weight'), 2, simplify = F)[-4], step_increase = 0.5, map_signif_level = T) +
   scale_y_continuous(expand=expand_scale(.22,0)) +
@@ -101,10 +109,10 @@ mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  # theme(legend.position = 'none') +
   xlab("Weight change") + ylab('Value') +
   coord_flip()
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_weight_change.png', width=11, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_weight_change.png', width=14, height=4)
 
 p2 = mydf3 %>% 
   mutate(weight_change = as.character(weight_change)) %>% 
@@ -136,7 +144,7 @@ mydf3 %>%
   mutate(variable = gsub('age_at_rec', 'Age', variable),
          variable = factor(variable, levels=c('Age', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
-  ggplot(aes(x=falls_in_last_year, y=value, fill=falls_in_last_year)) +
+  ggplot(aes(x=age_int, y=value, fill=falls_in_last_year)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   geom_signif(test="wilcox.test", comparisons = combn(c('No falls', 'One fall', '1+ falls'), 2, simplify = F)[-4], step_increase = 0.5, map_signif_level = T) +
   scale_y_continuous(expand=expand_scale(.22,0)) +
@@ -144,10 +152,10 @@ mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  # theme(legend.position = 'none') +
   xlab("Falls in last year") + ylab('Value') +
   coord_flip()
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_falls_in_last_year.png', width=11, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_falls_in_last_year.png', width=12, height=4)
 
 p3 = mydf3 %>% 
   filter(falls_in_last_year %in% c('No falls', 'Only one fall', 'More than one fall')) %>% 
@@ -177,7 +185,7 @@ mydf3 %>%
   mutate(variable = gsub('age_at_rec', 'Age', variable),
          variable = factor(variable, levels=c('Age', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
-  ggplot(aes(x=fractures_from_falls, y=value, fill=fractures_from_falls)) +
+  ggplot(aes(x=age_int, y=value, fill=fractures_from_falls)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   geom_signif(test="wilcox.test", comparisons = list(c('No', 'Yes')), map_signif_level = T) +
   scale_y_continuous(expand=expand_scale(.22,0)) +
@@ -185,9 +193,9 @@ mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  # theme(legend.position = 'none') +
   xlab("Fractures from falls") + ylab('Value')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_fractures_from_falls.png', width=11, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_fractures_from_falls.png', width=12, height=4)
 
 
 p4 = mydf3 %>% 

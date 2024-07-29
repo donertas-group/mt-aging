@@ -1,4 +1,3 @@
-# Analysis of genes whose expression in blood is correlated with pempt expression in liver
 library(tidyverse)
 library(reshape2)
 
@@ -13,6 +12,11 @@ exprdf = protein_exprr %>%
             expression = value) %>% 
   full_join(genecorrs, by='external_gene_name') %>% 
   transmute(f.eid, gene = external_gene_name, expression, rho)
+
+exprdf2 = exprdf %>% 
+  group_by(f.eid) %>% 
+  mutate(scaled_exp = scale(expression))
+
 
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
 mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
@@ -31,19 +35,33 @@ mydf3 = mydf2 %>%
 
 # boxplot of inds' expressions
 set.seed(123)
-eids=sample(unique(exprdf$f.eid), size = 100, replace = F)
-exprdf %>% 
+eids=sample(unique(exprdf2$f.eid), size = 100, replace = F)
+p1 = exprdf2 %>% 
+  filter(f.eid %in% eids) %>% 
+  mutate(f.eid = factor(f.eid)) %>% 
+  ggplot(aes(x=f.eid, y=scaled_exp)) +
+  geom_hline(yintercept=0, linetype=3, color='coral4') +
+  geom_boxplot(outlier.size=.2, fill='gray40', alpha=.6) +
+  theme_bw() +
+  theme(axis.text.x=element_blank()) +
+  ylab('Scaled expressions')
+
+p2 = exprdf %>% 
   filter(f.eid %in% eids) %>% 
   mutate(f.eid = factor(f.eid)) %>% 
   ggplot(aes(x=f.eid, y=expression)) +
   geom_hline(yintercept=0, linetype=3, color='coral4') +
   geom_boxplot(outlier.size=.2, fill='gray40', alpha=.6) +
   theme_bw() +
-  theme(axis.text.x=element_blank())
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/pemt_correlated_genes_expression.png', width = 10, height = 4)
+  theme(axis.text.x=element_blank()) +
+  ylab('Expressions')
+
+ggpubr::ggarrange(p1, p2, ncol=1)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/pemt_correlated_genes_expression.png', width = 12, height = 7)
+
 
 # correlations
-gnames = unique(exprdf$gene)
+gnames = unique(exprdf2$gene)
 vnames = c('PC', 'POFA', 'MOFA', 'TFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')
 
 cordf = apply(expand.grid(gnames, vnames), 1, function(x){
@@ -51,15 +69,15 @@ cordf = apply(expand.grid(gnames, vnames), 1, function(x){
   v = x[2] %>% as.character()
   
   pexp = 
-    exprdf %>% 
+    exprdf2 %>% 
     filter(gene == g) %>% 
-    select(f.eid, expression) %>% 
+    select(f.eid, scaled_exp) %>% 
     distinct() %>% 
     full_join(select(mydf3, 'f.eid', all_of(v)), by='f.eid') %>% 
     drop_na() %>% 
     rename(var = eval(v))
   
-  corres = cor.test(pexp$expression, pexp$var, m='s')
+  corres = cor.test(pexp$scaled_exp, pexp$var, m='s')
   c(g, v, corres$estimate, corres$p.value)
 }) %>% 
   t() %>% 
@@ -76,7 +94,8 @@ cormat = cordf %>%
   as.matrix() %>% 
   t()
 
-annodf = exprdf %>% 
+annodf = exprdf2 %>% 
+  ungroup %>% 
   select(gene, rho) %>% 
   distinct() %>% 
   arrange(desc(rho))
@@ -84,18 +103,19 @@ annodf = exprdf %>%
 annot_col = circlize::colorRamp2(c(-.43, 0, .43), c("#9970AB", "#F5F5F5", "#01665E"))
 row_annots = HeatmapAnnotation('PEMT Corr.' = round(annodf$rho, 2), col = list('PEMT Corr.' = annot_col))
 
-pdf('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/pemt_correlated_genes_corrs.pdf', width = 11, height = 4)
+png('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/pemt_correlated_genes_corrs_scaled.png', width = 11, height = 4)
 Heatmap(cormat[,annodf$gene], name='Correlation\ncoeff.', 
         col = circlize::colorRamp2(c(-.43, 0, .43), c("blue", "white", "red")), 
         top_annotation = row_annots, cluster_columns = FALSE)
 dev.off()
 
-
-## correlation across pemt correlated genes
 protein_exprr %>% 
   drop_na() %>% 
   select(-EID) %>% 
   mutate_all(as.numeric) %>% 
+  t() %>% 
+  scale() %>% 
+  t() %>% 
   cor(m='s') %>% 
   as.data.frame() %>% 
   rownames_to_column('var1') %>% 
@@ -110,6 +130,4 @@ protein_exprr %>%
   theme_bw() +
   theme(axis.text.x=element_text(angle=90, vjust = 0.5, hjust=1)) +
   coord_fixed()
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/corrs_among_pemt_correlated_genes.png', width = 8, height = 8)
-# they all are positively correlated
-
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/corrs_among_pemt_correlated_genes_scaled.png', width = 8, height = 8)
