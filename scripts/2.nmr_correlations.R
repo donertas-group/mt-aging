@@ -1,5 +1,6 @@
 # Plot age_vs_nmr metabolomics' correlation
 library(tidyverse)
+library(reshape2)
 library(ggpubr)
 
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
@@ -46,7 +47,7 @@ mydf2 %>%
   ggtitle('Age-associated changes') +
   theme_bw() +
   theme(legend.position = 'bottom')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/age_vs_nmrs.png', width=10, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/age_vs_nmrs.pdf', width=10, height=4)
 
 # boxplots
 mydf2 %>% 

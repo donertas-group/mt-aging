@@ -119,7 +119,7 @@ mydf2 %>%
 ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/lactate_quartiles_boxplots.png', width=10, height=5)
 
 
-# per quantile for sexes seperately
+# per quantile for sexes together
 mydf2 %>% 
   mutate(PC_TFA_Ratio = PC / TFA) %>% 
   rename(age=age_at_rec) %>% 
@@ -144,5 +144,5 @@ mydf2 %>%
   theme(legend.position='none') +
   facet_wrap(variable~., scales='free_y', nrow=2) +
   xlab('Lactate Quartile') + ylab('Value')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/lactate_quartiles_boxplots2.png', width=10, height=5)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/lactate_quartiles_boxplots2.pdf', width=10, height=5)
 

@@ -46,9 +46,6 @@ mydf3 = mydf2 %>%
   mutate(age_int = cut(age_at_rec, breaks=c(35,40,45,50,55,60,65,70,75)),
          age_int = as.character(age_int)) 
 
-## TODO: calculate correlation on age-stratified inds
-
-
 
 # stratify by medical condition
 # diabetes
@@ -60,7 +57,7 @@ mydf3 %>%
          diabetes = factor(diabetes, levels=c('Non-diabetic', 'Diabetic')),
          variable = factor(variable, levels=c('Age', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))) %>% 
   drop_na() %>% 
-  ggplot(aes(x=age_int, y=value, fill=diabetes)) +
+  ggplot(aes(x=diabetes, y=value, fill=diabetes)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   facet_wrap(variable~., scales='free_y', nrow=2) +
   geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = T) +
@@ -70,7 +67,7 @@ mydf3 %>%
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
   # theme(legend.position = 'none') +
   xlab("") + ylab('Value')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_diabetes.png', width=13, height=4)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/met_dists_for_diabetes.pdf', width=13, height=4)
 
 p1=mydf3 %>% 
   melt(measure.vars=c('age_at_rec', 'PC', 'POFA', 'MOFA', 'PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')) %>% 
