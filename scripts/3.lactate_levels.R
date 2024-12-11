@@ -145,4 +145,3 @@ mydf2 %>%
   facet_wrap(variable~., scales='free_y', nrow=2) +
   xlab('Lactate Quartile') + ylab('Value')
 ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/lactate_quartiles_boxplots2.pdf', width=10, height=5)
-
