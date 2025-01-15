@@ -3,6 +3,23 @@ library(tidyverse)
 library(reshape2)
 library(ggpubr)
 
+### t r b l 
+# v1
+# marginc = margin(10,0.5,10,10, "pt")
+# margind = margin(10,10,10,10, "pt")
+# marginf = margin(10,10,10,10, "pt")
+# marginh = margin(10,10,10,10, "pt")
+# v2
+# marginc = margin(10,0.5,10,10, "pt")
+# margind = margin(10,10,10,10, "pt")
+# marginf = margin(15,10,10,10, "pt")
+# marginh = margin(15,10,10,10, "pt")
+# v3
+marginc = margin(20,0.5,20,20, "pt")
+margind = margin(20,20,20,20, "pt")
+marginf = margin(20,20,20,20, "pt")
+marginh = margin(20,20,20,20, "pt")
+
 # panel c
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
 mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
@@ -33,7 +50,8 @@ pc1 = mydf3 %>%
   scale_color_manual(values=RColorBrewer::brewer.pal(3, 'Set2')) +
   # ggtitle('Age-associated changes') +
   theme_bw() +
-  theme(legend.position = 'right')
+  theme(legend.position = 'right',
+        plot.margin = marginc)
 
 pc2 = mydf3 %>% 
   ggplot(aes(x=age, y=PC_TFA_Ratio, color=Sex)) +
@@ -45,7 +63,8 @@ pc2 = mydf3 %>%
   scale_color_manual(values=RColorBrewer::brewer.pal(3, 'Set2')) +
   # ggtitle('Age-associated changes') +
   theme_bw() +
-  theme(legend.position = 'right')
+  theme(legend.position = 'right',
+        plot.margin = marginc)
 
 pc = ggarrange(pc1, pc2, ncol=1, heights = c(1, 1), common.legend=T, legend = 'right')
 
@@ -59,10 +78,10 @@ mydf3_save = lapply(smydf3, function(df){
   bind_rows() %>% 
   select(-PC, -PC_TFA_Ratio)
 
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7c.csv', row.names = F)
+# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7c.csv', row.names = F)
 
 # panel d
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'marginc', 'margind', 'marginf', 'marginh')))
 fields = c('sex', 'age_at_rec', 'PC', 'POFA_Total_Ratio', 'TFA', 'Lactate')
 cols = mymetadf %>% 
   filter(name %in% fields) %>% 
@@ -92,7 +111,8 @@ pd1 = mydf3 %>%
   scale_x_discrete(breaks=c(1,4), 
                    labels=c('Q1', 'Q4')) +
   theme_bw() +
-  theme(legend.position='none') +
+  theme(legend.position='none',
+        plot.margin = margind) +
   xlab('Lactate Quartile') + ylab('PC/TFA Ratio')
 
 pd2=mydf3 %>% 
@@ -107,7 +127,8 @@ pd2=mydf3 %>%
   scale_x_discrete(breaks=c(1,4), 
                    labels=c('Q1', 'Q4')) +
   theme_bw() +
-  theme(legend.position='none') +
+  theme(legend.position='none',
+        plot.margin = margind) +
   xlab('Lactate Quartile') + ylab('PUFA/TFA Ratio')
 pd = ggarrange(pd1, pd2, ncol=2)
 
@@ -122,11 +143,11 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(lactate_quartile=L1)
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7d-e.csv', row.names = F)
+# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7d-e.csv', row.names = F)
 
 ## panels f and g
 # get illnesses
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pd', 'pc')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pd', 'pc', 'marginc', 'margind', 'marginf', 'marginh')))
 illness_codes = read.delim('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/illness_codings.tsv')
 diabetes_codes = illness_codes %>% 
   filter(startsWith(meaning, 'E10') | startsWith(meaning, 'E11') | startsWith(meaning, 'E12') | startsWith(meaning, 'E13') | startsWith(meaning, 'E14')) %>% 
@@ -177,7 +198,8 @@ pf1=mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  theme(legend.position = 'none',
+        plot.margin = marginf) +
   xlab("Diabetes status") + ylab('PC/TFA Ratio')
 
 
@@ -190,11 +212,12 @@ pf2=mydf3 %>%
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
                     values=RColorBrewer::brewer.pal(3, 'Set1')) +
-  theme(legend.position = 'none') +
+  theme(legend.position = 'none',
+        plot.margin = marginf) +
   xlab("Diabetes status") + ylab('PUFA/TFA Ratio')
 
 pf = ggarrange(pf1, pf2, ncol=2)
-mydf3 %>% head
+
 # calculate density estimates for boxplots
 smydf3 = split(mydf3, as.character(mydf3$diabetes))
 mydf3_save = lapply(smydf3, function(df){
@@ -207,10 +230,10 @@ mydf3_save = lapply(smydf3, function(df){
   melt(measure.vars=c()) %>% 
   rename(diabetes=L1)
 
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7f-g.csv', row.names = F)
+# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7f-g.csv', row.names = F)
 
 # panel h 
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'pd', 'pf')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'pd', 'pf', 'marginc', 'margind', 'marginf', 'marginh')))
 met_fields = c('age_at_rec', 'PC', 'POFA', 'MOFA', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')
 health_fields = c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace')
 
@@ -268,10 +291,11 @@ ph = corrsdf %>%
                    breaks=c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace'),
                    labels=c('Basal Metabolic Rate', 'CCI', 'Max Digits Remembered', 'Walking Pace')) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle=60, hjust = 1)) +
+  theme(axis.text.x = element_text(angle=60, hjust = 1),
+        plot.margin = marginh) +
   xlab('Metabolites') + ylab('Health parameters')
 
-write.csv(select(ph$data, -c(lab, sig)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7h.csv', row.names = F)
+# write.csv(select(ph$data, -c(lab, sig)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7h.csv', row.names = F)
 # final figure
 p = ggarrange(ggarrange(pc, ggarrange(pd, pf, ncol=1), widths = c(.8, 1)), ph, nrow=2, heights = c(1.2, 1))
 ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figure7c-h.pdf', p, width=8, height=8)
