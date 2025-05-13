@@ -1,5 +1,0 @@
-
-UKBiobank ukb_md5_lx (c) CTSU. Compiled Mar 14 2018 14:21:31.
-
-Input file: "/scratch/shire/data/biobank/ukbb_immunosenescence/data/raw/ukb678748.enc" opened
-Size=5610997647, MD5=f57c2ce2e07cf74f496db30014f2d6f1

@@ -1,4 +1,5 @@
 library(tidyverse)
+library(reshape2)
 library(ggpubr)
 
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
@@ -26,7 +27,15 @@ pa = mydf2 %>%
   theme(legend.position='none') +
   xlab('Age interval') +
   ylab('Num. of individuals')
-write.csv(select(pa$data, c(sex, ageints, n)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs14a.csv', row.names = F)
+# write.csv(select(pa$data, c(sex, ageints, n)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs14a.csv', row.names = F)
+
+# stat table
+pa_stattab = pa$data %>% 
+  select(-.group) %>% 
+  ungroup %>% 
+  as.data.frame()
+
+xlsx::write.xlsx(pa_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig14a.xlsx')
 
 # panel b - corrs
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa')))
@@ -83,3 +92,21 @@ write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/
 
 p = ggarrange(pa, pb, nrow=2, heights = c(1, 1.2))
 ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureS14.pdf', p, width=8, height=6)
+
+## stat table
+pb_stattab = mydf2 %>% 
+  melt(id.vars=c('age_at_rec', 'sex')) %>% 
+  group_by(sex, variable) %>% 
+  summarise(
+    n=n(),
+    mn = min(value),
+    q1 = quantile(value)[2],
+    q2 = quantile(value)[3],
+    q3 = quantile(value)[4],
+    mx = max(value)
+  ) %>% 
+  mutate(variable = setNames(c('TFA', 'PUFA', 'MUFA', 'SFA', 'PUFA/MUFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio', 'SFA/TFA Ratio'),
+                             c('TFA', 'PUFA', 'MUFA', 'SFA', 'PUFA_MUFA_Ratio', 'PUFA_TFA_Ratio', 'MUFA_TFA_Ratio', 'SFA_TFA_Ratio'))[variable]) %>% 
+  as.data.frame()
+
+xlsx::write.xlsx(pb_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig14b.xlsx')

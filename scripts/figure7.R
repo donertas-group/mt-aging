@@ -4,25 +4,15 @@ library(reshape2)
 library(ggpubr)
 
 ### t r b l 
-# v1
-# marginc = margin(10,0.5,10,10, "pt")
-# margind = margin(10,10,10,10, "pt")
-# marginf = margin(10,10,10,10, "pt")
-# marginh = margin(10,10,10,10, "pt")
-# v2
-# marginc = margin(10,0.5,10,10, "pt")
-# margind = margin(10,10,10,10, "pt")
-# marginf = margin(15,10,10,10, "pt")
-# marginh = margin(15,10,10,10, "pt")
+marginc = margin(10,0.5,10,10, "pt")
+margind = margin(10,10,10,10, "pt")
+marginf = margin(15,10,10,10, "pt")
+marginh = margin(15,10,10,10, "pt")
 # v3
-marginc = margin(20,0.5,20,20, "pt")
-margind = margin(20,20,20,20, "pt")
-marginf = margin(20,20,20,20, "pt")
-marginh = margin(20,20,20,20, "pt")
-
+significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
 # panel c
-mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
-mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+
+source(./files.R)
 
 fields = c('sex', 'age_at_rec', 'PC', 'TFA')
 cols = mymetadf %>% 
@@ -77,11 +67,10 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>% 
   bind_rows() %>% 
   select(-PC, -PC_TFA_Ratio)
-
 # write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7c.csv', row.names = F)
 
 # panel d
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'marginc', 'margind', 'marginf', 'marginh')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
 fields = c('sex', 'age_at_rec', 'PC', 'POFA_Total_Ratio', 'TFA', 'Lactate')
 cols = mymetadf %>% 
   filter(name %in% fields) %>% 
@@ -102,7 +91,7 @@ mydf3=mydf2 %>%
 pd1 = mydf3 %>% 
   ggplot(aes(x=lactate_quartile, y=PC_TFA_Ratio, fill=lactate_quartile)) +
   geom_boxplot(alpha=.9, outlier.size=.3) +
-  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.25,0)) +
   scale_fill_manual(name='Lactate Quartile', 
                     breaks=c(1,4),
@@ -118,7 +107,7 @@ pd1 = mydf3 %>%
 pd2=mydf3 %>% 
   ggplot(aes(x=lactate_quartile, y=PUFA_Total_Ratio, fill=lactate_quartile)) +
   geom_boxplot(alpha=.9, outlier.size=.3) +
-  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.25,0)) +
   scale_fill_manual(name='Lactate Quartile', 
                     breaks=c(1,4),
@@ -131,6 +120,7 @@ pd2=mydf3 %>%
         plot.margin = margind) +
   xlab('Lactate Quartile') + ylab('PUFA/TFA Ratio')
 pd = ggarrange(pd1, pd2, ncol=2)
+pd
 
 # calculate density estimates for boxplots
 smydf3 = split(mydf3, as.character(mydf3$lactate_quartile))
@@ -145,9 +135,23 @@ mydf3_save = lapply(smydf3, function(df){
   rename(lactate_quartile=L1)
 # write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7d-e.csv', row.names = F)
 
+# stat table
+#d= ; e=PUFA_Total_Ratio
+stderror <- function(x) sd(x)/sqrt(length(x))
+mydf3 %>% 
+  group_by(lactate_quartile) %>% 
+  summarise(
+    n = n(),
+    mean = mean(PUFA_Total_Ratio),
+    sem = stderror(PUFA_Total_Ratio))
+
+
+wilcox.test(filter(mydf3, lactate_quartile==1)$PUFA_Total_Ratio, filter(mydf3, lactate_quartile==4)$PUFA_Total_Ratio, paired = F, exact = T)
+
+
 ## panels f and g
 # get illnesses
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pd', 'pc', 'marginc', 'margind', 'marginf', 'marginh')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pd', 'pc', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
 illness_codes = read.delim('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/illness_codings.tsv')
 diabetes_codes = illness_codes %>% 
   filter(startsWith(meaning, 'E10') | startsWith(meaning, 'E11') | startsWith(meaning, 'E12') | startsWith(meaning, 'E13') | startsWith(meaning, 'E14')) %>% 
@@ -193,7 +197,7 @@ pf1=mydf3 %>%
   ggplot(aes(x=diabetes, y=PC_TFA_Ratio, fill=diabetes)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   # facet_wrap(variable~., scales='free_y', nrow=2) +
-  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.15,0)) +
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
@@ -207,7 +211,7 @@ pf2=mydf3 %>%
   ggplot(aes(x=diabetes, y=PUFA_TFA_Ratio, fill=diabetes)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   # facet_wrap(variable~., scales='free_y', nrow=2) +
-  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.15,0)) +
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
@@ -230,10 +234,27 @@ mydf3_save = lapply(smydf3, function(df){
   melt(measure.vars=c()) %>% 
   rename(diabetes=L1)
 
+# stat table
+# change PUFA_TFA_Ratio for the other stat
+stderror <- function(x) sd(x)/sqrt(length(x))
+mydf3 %>% 
+  transmute(diabetes, var=PUFA_TFA_Ratio) %>% 
+  group_by(diabetes) %>% 
+  summarise(
+    n = n(),
+    mean = mean(var),
+    sem = stderror(var))
+  
+
+wilcox.test(filter(mydf3, diabetes == 'Non-diabetic')$PUFA_TFA_Ratio,
+            filter(mydf3, diabetes == 'Diabetic')$PUFA_TFA_Ratio,
+            paired=F)
+
+
 # write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7f-g.csv', row.names = F)
 
 # panel h 
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'pd', 'pf', 'marginc', 'margind', 'marginf', 'marginh')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'pd', 'pf', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
 met_fields = c('age_at_rec', 'PC', 'POFA', 'MOFA', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')
 health_fields = c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace')
 
@@ -267,11 +288,15 @@ corrsdf =
   mutate(rho = as.numeric(rho),
          p.value = as.numeric(p.value))
 
-ph = corrsdf %>% 
+ph =
+  corrsdf %>% 
   mutate(lab = as.character(round(rho,2))) %>% 
-  mutate(sig = ifelse(p.value < 0.1, '*', ' '),
-         sig = ifelse(p.value < 0.05, '**', ' '),
-         sig = ifelse(p.value < 0.01, '***', ' ')) %>%
+  mutate(sig = ' ',
+         sig = ifelse(p.value < 0.05, '*', sig),
+         sig = ifelse(p.value < 0.01, '**', sig),
+         sig = ifelse(p.value < 0.001, '***', sig),
+         sig = ifelse(p.value < 0.0001, '****', sig),
+         ) %>%
   mutate(met=gsub('POFA', 'PUFA', met),
          met=gsub('MOFA', 'MUFA', met),
          met=gsub('Total', 'TFA', met)) %>% 
@@ -280,7 +305,7 @@ ph = corrsdf %>%
   mutate(lbl = paste0(lab, sig)) %>% 
   ggplot(aes(x=met, y=param, fill=rho)) +
   geom_tile() +
-  geom_text(aes(label=lbl)) +
+  geom_text(aes(label=lbl), size=3) +
   labs(fill = 'Correlation\ncoeff.') +
   scale_fill_gradient2(high = 'firebrick2', mid = 'white', low = 'dodgerblue4', 
                        limits = c(-.42, .42), midpoint = 0)  +
@@ -289,7 +314,7 @@ ph = corrsdf %>%
                    labels=c('PUFA', 'MUFA', 'PC', 'PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio')) +
   scale_y_discrete(name='Health parameters',
                    breaks=c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace'),
-                   labels=c('Basal Metabolic Rate', 'CCI', 'Max Digits Remembered', 'Walking Pace')) +
+                   labels=c('Basal Metabolic Rate (n = 29,594)', 'CCI (n = 30,269)', 'Max Digits Remembered (n = 2,655)', 'Walking Pace (n = 29,941)')) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=60, hjust = 1),
         plot.margin = marginh) +
@@ -298,4 +323,42 @@ ph = corrsdf %>%
 # write.csv(select(ph$data, -c(lab, sig)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7h.csv', row.names = F)
 # final figure
 p = ggarrange(ggarrange(pc, ggarrange(pd, pf, ncol=1), widths = c(.8, 1)), ph, nrow=2, heights = c(1.2, 1))
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figure7c-h.pdf', p, width=8, height=8)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figure7c-h_final_v2.pdf', p, width=8, height=8)
+
+
+# stat table
+ph_stat_table = apply(combdf, 1, function(x){
+  v1 = x[1] %>% as.character()
+  v2 = x[2] %>% as.character()
+  cres = cor.test(mydf4[,v1], mydf4[,v2], m='s')
+  n = mydf4 %>% select(v1,v2) %>% drop_na %>% nrow()
+  data.frame(param=v1, met=v2, 'rho'=cres$estimate, 'p.value'=cres$p.value, n=n)
+}) %>% 
+  melt(measure.vars=c()) %>% 
+  select(-L1) %>% 
+  mutate(rho = as.numeric(rho),
+         p.value = as.numeric(p.value)) %>% 
+  mutate(lab = as.character(round(rho,2))) %>% 
+  mutate(sig = ' ',
+         sig = ifelse(p.value < 0.05, '*', sig),
+         sig = ifelse(p.value < 0.01, '**', sig),
+         sig = ifelse(p.value < 0.001, '***', sig),
+         sig = ifelse(p.value < 0.0001, '****', sig),
+  ) %>%
+  mutate(met=gsub('POFA', 'PUFA', met),
+         met=gsub('MOFA', 'MUFA', met),
+         met=gsub('Total', 'TFA', met)) %>% 
+  mutate(met = factor(met, levels=c('PUFA', 'MUFA', 'PC', 'PC_TFA_Ratio', 'PUFA_TFA_Ratio', 'MUFA_TFA_Ratio', 'PUFA_MUFA_Ratio'))) %>% 
+  mutate(param = setNames(c('Basal Metabolic Rate', 'CCI', 'Max Digits Remembered', 'Walking Pace'),
+                          c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace'))[param]) %>% 
+  transmute('Health parameters' = param,
+            'Metabolites' = met,
+            'P-value' = p.value,
+            'Correlation coefficient' = round(rho, 5),
+            'Significance' = sig,
+            'Sample size' = paste0('n=', n)
+  ) %>% 
+  distinct()
+ph_stat_table
+xlsx::write.xlsx(ph_stat_table, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_fig7h.xlsx')
+

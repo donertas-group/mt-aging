@@ -1,1 +1,0 @@
-Scripts in this folder is used to retrieve basal metabolic rate and cognitive scores from dnanexus. this is only to not wait for new basket to be approved. after having a new basket with all the data, we will not need to use these and all the data should be already available.

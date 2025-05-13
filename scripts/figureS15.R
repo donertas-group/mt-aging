@@ -4,6 +4,7 @@ library(ggsignif)
 
 mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
 mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
 
 # panel a
 fields = c('age_at_rec', 'POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio', 'Lactate')
@@ -18,7 +19,7 @@ mydf3 = mydf2 %>%
   mutate(lactate_quartile = ntile(Lactate, 4)) %>% 
   filter(lactate_quartile %in% c(1,4)) %>% 
   mutate(lactate_quartile = factor(lactate_quartile, levels=1:4)) %>% 
-  select(-Lactate, -age_at_rec) %>% 
+  select(-Lactate, -age_at_rec) %>%
   drop_na()
   
 pa = 
@@ -30,7 +31,7 @@ pa =
   mutate(variable = factor(variable, levels=c('PUFA/MUFA Ratio', 'MUFA/TFA Ratio', 'SFA/TFA Ratio'))) %>% 
   ggplot(aes(x=lactate_quartile, y=value, fill=lactate_quartile)) +
   geom_boxplot(alpha=.9, outlier.size=.3) +
-  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.25,0)) +
   scale_fill_manual(name='Lactate Quartile', 
                     breaks=c(1,4),
@@ -60,8 +61,35 @@ mydf3_save = lapply(smydf3, function(df){
   rename(lactate_quartile=L1)
 write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15a.csv', row.names = F)
 
+# stat table
+stderror <- function(x) sd(x)/sqrt(length(x))
+pa_stattab = mydf3 %>% 
+  drop_na() %>% 
+  melt(id.vars=c('lactate_quartile')) %>% 
+  group_by(lactate_quartile, variable) %>% 
+  summarise(
+    n = n(),
+    mean = mean(value),
+    sem = stderror(value)
+  ) %>% 
+  mutate(variable = setNames(c('PUFA/MUFA Ratio', 'SFA/TFA Ratio', 'MUFA/TFA Ratio'),
+                             c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
+  as.data.frame() %>% 
+  mutate(n = paste0('n=', n),
+         lactate_quartile = paste0('Q', lactate_quartile)) 
+xlsx::write.xlsx(pa_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15a.xlsx')
+
+vars = c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio')
+# var = vars[1]
+for (var in vars){
+  v1 = filter(mydf3, lactate_quartile == 1) %>% pull(var)
+  v2 = filter(mydf3, lactate_quartile == 4) %>% pull(var)
+  print(wilcox.test(v1, v2, paired=F))
+}
+
+
 ## panel b
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'significances')))
 met_fields = c('sex', 'age_at_rec', 'PC', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
 health_fields = c('weight_change')
 
@@ -79,15 +107,16 @@ mydf3 =
   mutate(weight_change = as.character(weight_change)) %>% 
   filter(weight_change %in% c('No - weigh about the same', 'Yes - gained weight', 'Yes - lost weight')) %>% 
   mutate(weight_change = setNames(c('No change', 'Gained weight', 'Lost weight'), c('No - weigh about the same', 'Yes - gained weight', 'Yes - lost weight'))[weight_change])
-pb = mydf3 %>% 
+pb =
+  mydf3 %>% 
   melt(measure.vars=c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')) %>% 
   mutate(variable = setNames(c('PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio'),
                              c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
-  drop_na() %>% 
+  drop_na() %>%
   mutate(weight_change = factor(weight_change, levels=rev(c('Gained weight', 'No change', 'Lost weight')))) %>%
   ggplot(aes(y=weight_change, x=value, fill=weight_change)) +
   geom_boxplot(alpha=.6, outliers = F) +
-  geom_signif(test="wilcox.test", comparisons = combn(c('Gained weight', 'No change', 'Lost weight'), 2, simplify = F)[-4], step_increase = 0.5, map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = combn(c('Gained weight', 'No change', 'Lost weight'), 2, simplify = F)[-4], step_increase = 0.5, map_signif_level = significances) +
   scale_x_continuous(expand=expand_scale(.22,0)) +
   facet_wrap(variable~., scales='free_x', strip.position = "bottom", nrow=1) +
   theme_bw() +
@@ -114,8 +143,37 @@ mydf3_save = lapply(smydf3, function(df){
   rename(weight_change=L1)
 write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15b.csv', row.names = F)
 
+# stat table
+stderror <- function(x) sd(x)/sqrt(length(x))n = n()
+pb_stattab = mydf3 %>% 
+  drop_na() %>% 
+  melt(id.vars=c('weight_change')) %>% 
+  group_by(weight_change, variable) %>% 
+  summarise(
+    n = n(),
+    mean = mean(value),
+    sem = stderror(value)
+  ) %>% 
+  mutate(variable = setNames(c('PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio'),
+                             c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
+  mutate(n=paste0('n=', n)) %>% 
+  as.data.frame()
+xlsx::write.xlsx(pb_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15b.xlsx')
+
+
+mydf4=mydf3 %>% drop_na
+vars = c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
+for (var in vars){
+  print(var)
+  v1 = filter(mydf4, weight_change == 'Lost weight') %>% pull(var)
+  v2 = filter(mydf4, weight_change == 'No change') %>% pull(var)
+  print(wilcox.test(v1, v2, paired=F))
+  cat('\n')
+}
+
+
 ## panel c-d
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'pb')))
+rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'pb', 'significances')))
 illness_codes = read.delim('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/illness_codings.tsv')
 diabetes_codes = illness_codes %>% 
   filter(startsWith(meaning, 'E10') | startsWith(meaning, 'E11') | startsWith(meaning, 'E12') | startsWith(meaning, 'E13') | startsWith(meaning, 'E14')) %>% 
@@ -161,7 +219,7 @@ pc = mydf3 %>%
   ggplot(aes(x=diabetes, y=value, fill=diabetes)) +
   geom_boxplot(outlier.shape = NA, alpha=.6) +
   facet_wrap(variable~., scales='free', nrow=2, strip.position = "left") +
-  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = T) +
+  geom_signif(test="wilcox.test", comparisons = list(c("Diabetic", "Non-diabetic")), map_signif_level = significances) +
   scale_y_continuous(expand=expand_scale(.15,0)) +
   theme_bw() +
   scale_fill_manual(name='Medical condition', 
@@ -199,7 +257,35 @@ mydf3_save = lapply(smydf3, function(df){
   rename(diabetes=L1)
 write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15cd.csv', row.names = F)
 
+stderror <- function(x) sd(x)/sqrt(length(x))
+pc_stattab = mydf3 %>% 
+  melt(id.vars=c('diabetes')) %>% 
+  mutate(variable = setNames(c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'),
+                             c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))[variable]) %>% 
+  mutate(diabetes = gsub('patients', 'Diabetic', diabetes),
+         diabetes = gsub('healthy', 'Non-diabetic', diabetes),
+         diabetes = factor(diabetes, levels=c('Non-diabetic', 'Diabetic')),
+         variable = factor(variable, levels=c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'))) %>% 
+  drop_na() %>% 
+  group_by(diabetes, variable) %>% 
+  summarise(
+    n = n(),
+    mean = mean(value),
+    sem = stderror(value)
+  ) %>% 
+  mutate(n = paste0('n=', n)) %>% 
+  data.frame() %>% 
+  arrange(variable)
+xlsx::write.xlsx(pc_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15c.xlsx')
+
+for (var in c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')){
+  v1 = mydf3 %>% filter(diabetes=='healthy') %>% pull(var)
+  v2 = mydf3 %>% filter(diabetes=='patients') %>% pull(var)
+  print(var)
+  print(wilcox.test(v1, v2, paired=F))
+  cat('\n')
+}
 
 #combine plots
 p = ggarrange(pa,pb,pc,ncol=1, heights=c(1,1.4,1.8))
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureS15.pdf', p, width=8, height=8)
+ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureS15_final.pdf', p, width=8, height=8)
