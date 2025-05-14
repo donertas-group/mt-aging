@@ -2,10 +2,9 @@ library(tidyverse)
 library(reshape2)
 library(ggpubr)
 
-mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
-mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+source('scripts/files.R')
 
-# panel a - age dist
+# Panel A #####
 cols = mymetadf %>% 
   filter(name %in% c('sex', 'age_at_rec')) %>% 
   select(field_id, name)
@@ -27,7 +26,7 @@ pa = mydf2 %>%
   theme(legend.position='none') +
   xlab('Age interval') +
   ylab('Num. of individuals')
-# write.csv(select(pa$data, c(sex, ageints, n)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs14a.csv', row.names = F)
+write.csv(select(pa$data, c(sex, ageints, n)), file=file.path(table_out_dir, 'fs14a.csv'), row.names = F)
 
 # stat table
 pa_stattab = pa$data %>% 
@@ -35,9 +34,9 @@ pa_stattab = pa$data %>%
   ungroup %>% 
   as.data.frame()
 
-xlsx::write.xlsx(pa_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig14a.xlsx')
+xlsx::write.xlsx(pa_stattab, file.path(table_out_dir, 'stat_table_sfig14a.xlsx'))
 
-# panel b - corrs
+# Panel B #####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa')))
 fields = c('sex', 'age_at_rec', 'POFA', 'MOFA', 'SFA', 'POFA_MOFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'SFA_Total_Ratio', 'TFA')
 cols = mymetadf %>% 
@@ -88,10 +87,7 @@ mydf3_save = lapply(smydf2, function(df){
   select(-c(TFA, POFA, MOFA, SFA, POFA_MOFA_Ratio, POFA_Total_Ratio, MOFA_Total_Ratio, SFA_Total_Ratio)) %>% 
   rename(age=age_at_rec)
 
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs14b.csv', row.names = F)
-
-p = ggarrange(pa, pb, nrow=2, heights = c(1, 1.2))
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureS14.pdf', p, width=8, height=6)
+write.csv(mydf3_save, file=file.path(table_out_dir, 'fs14b.csv'), row.names = F)
 
 ## stat table
 pb_stattab = mydf2 %>% 
@@ -109,4 +105,9 @@ pb_stattab = mydf2 %>%
                              c('TFA', 'PUFA', 'MUFA', 'SFA', 'PUFA_MUFA_Ratio', 'PUFA_TFA_Ratio', 'MUFA_TFA_Ratio', 'SFA_TFA_Ratio'))[variable]) %>% 
   as.data.frame()
 
-xlsx::write.xlsx(pb_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig14b.xlsx')
+xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig14b.xlsx'))
+
+
+p = ggarrange(pa, pb, nrow=2, heights = c(1, 1.2))
+ggsave(file.path(figure_out_dir, 'figureS14.pdf '), p, width=8, height=6)
+

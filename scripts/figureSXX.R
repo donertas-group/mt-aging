@@ -2,8 +2,8 @@ library(tidyverse)
 library(reshape2)
 library(ggsignif)
 
-mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
-mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+source('scripts/files.R')
+
 significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
 
 # distribution of lactate levels
@@ -28,5 +28,5 @@ mydf3 %>%
   geom_vline(xintercept = quantile(mydf3$Lactate, probs = c(.75)), linetype=2, color='gray25') +
   theme_bw() +
   labs(x='Lactate levels (mmol/l)', y='Count')
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureSXX.pdf', width=6, height=4)
-# ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureSXX.png', width=6, height=4)
+ggsave(files.path(figure_out_dir, 'figureSXX.pdf'), width=6, height=4)
+

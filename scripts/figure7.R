@@ -3,16 +3,15 @@ library(tidyverse)
 library(reshape2)
 library(ggpubr)
 
+
 ### t r b l 
 marginc = margin(10,0.5,10,10, "pt")
 margind = margin(10,10,10,10, "pt")
 marginf = margin(15,10,10,10, "pt")
 marginh = margin(15,10,10,10, "pt")
-# v3
 significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
-# panel c
 
-source(./files.R)
+source('scripts/files.R')
 
 fields = c('sex', 'age_at_rec', 'PC', 'TFA')
 cols = mymetadf %>% 
@@ -30,6 +29,7 @@ mydf3 = mydf2 %>%
   select(-age_at_rec) %>% 
   rename(Sex=sex)
 
+# Panel C #####
 pc1 = mydf3 %>% 
   ggplot(aes(x=age, y=PC, color=Sex)) +
   geom_smooth(se=F) +
@@ -67,9 +67,9 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>% 
   bind_rows() %>% 
   select(-PC, -PC_TFA_Ratio)
-# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7c.csv', row.names = F)
+write.csv(mydf3_save, file=file.path(table_out_dir, 'f7c.csv'), row.names = F)
 
-# panel d
+# Panel D #####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
 fields = c('sex', 'age_at_rec', 'PC', 'POFA_Total_Ratio', 'TFA', 'Lactate')
 cols = mymetadf %>% 
@@ -120,7 +120,6 @@ pd2=mydf3 %>%
         plot.margin = margind) +
   xlab('Lactate Quartile') + ylab('PUFA/TFA Ratio')
 pd = ggarrange(pd1, pd2, ncol=2)
-pd
 
 # calculate density estimates for boxplots
 smydf3 = split(mydf3, as.character(mydf3$lactate_quartile))
@@ -133,26 +132,12 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(lactate_quartile=L1)
-# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7d-e.csv', row.names = F)
-
-# stat table
-#d= ; e=PUFA_Total_Ratio
-stderror <- function(x) sd(x)/sqrt(length(x))
-mydf3 %>% 
-  group_by(lactate_quartile) %>% 
-  summarise(
-    n = n(),
-    mean = mean(PUFA_Total_Ratio),
-    sem = stderror(PUFA_Total_Ratio))
+write.csv(mydf3_save, file=file.path(table_out_dir, 'f7d-e.csv'), row.names = F)
 
 
-wilcox.test(filter(mydf3, lactate_quartile==1)$PUFA_Total_Ratio, filter(mydf3, lactate_quartile==4)$PUFA_Total_Ratio, paired = F, exact = T)
-
-
-## panels f and g
-# get illnesses
+# Panels F and G #####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pd', 'pc', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
-illness_codes = read.delim('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/illness_codings.tsv')
+illness_codes = read.delim(file.path(project_dir, 'data', 'illness_codings.tsv'))
 diabetes_codes = illness_codes %>% 
   filter(startsWith(meaning, 'E10') | startsWith(meaning, 'E11') | startsWith(meaning, 'E12') | startsWith(meaning, 'E13') | startsWith(meaning, 'E14')) %>% 
   filter(selectable == 'Y') %>% 
@@ -233,27 +218,9 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(diabetes=L1)
+write.csv(mydf3_save, file=file.path(table_out_dir, 'f7f-g.csv'), row.names = F)
 
-# stat table
-# change PUFA_TFA_Ratio for the other stat
-stderror <- function(x) sd(x)/sqrt(length(x))
-mydf3 %>% 
-  transmute(diabetes, var=PUFA_TFA_Ratio) %>% 
-  group_by(diabetes) %>% 
-  summarise(
-    n = n(),
-    mean = mean(var),
-    sem = stderror(var))
-  
-
-wilcox.test(filter(mydf3, diabetes == 'Non-diabetic')$PUFA_TFA_Ratio,
-            filter(mydf3, diabetes == 'Diabetic')$PUFA_TFA_Ratio,
-            paired=F)
-
-
-# write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7f-g.csv', row.names = F)
-
-# panel h 
+# Panel H #####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pc', 'pd', 'pf', 'marginc', 'margind', 'marginf', 'marginh', 'significances')))
 met_fields = c('age_at_rec', 'PC', 'POFA', 'MOFA', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')
 health_fields = c('basal_metabolic_rate', 'cci', 'max_digits_remembered', 'walking_pace')
@@ -320,10 +287,10 @@ ph =
         plot.margin = marginh) +
   xlab('Metabolites') + ylab('Health parameters')
 
-# write.csv(select(ph$data, -c(lab, sig)), file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/f7h.csv', row.names = F)
+
 # final figure
 p = ggarrange(ggarrange(pc, ggarrange(pd, pf, ncol=1), widths = c(.8, 1)), ph, nrow=2, heights = c(1.2, 1))
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figure7c-h_final_v2.pdf', p, width=8, height=8)
+ggsave(file.path(figure_out_dir, 'figure7c-h_final_v2.pdf'), p, width=8, height=8)
 
 
 # stat table
@@ -359,6 +326,5 @@ ph_stat_table = apply(combdf, 1, function(x){
             'Sample size' = paste0('n=', n)
   ) %>% 
   distinct()
-ph_stat_table
-xlsx::write.xlsx(ph_stat_table, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_fig7h.xlsx')
+xlsx::write.xlsx(ph_stat_table, file.path(table_out_dir, 'stat_table_fig7h.xlsx'))
 

@@ -2,11 +2,11 @@ library(tidyverse)
 library(reshape2)
 library(ggsignif)
 
-mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
-mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+source('scripts/files.R')
+
 significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
 
-# panel a
+## Panel A ####
 fields = c('age_at_rec', 'POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio', 'Lactate')
 cols = mymetadf %>% 
   filter(name %in% fields) %>% 
@@ -59,7 +59,7 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(lactate_quartile=L1)
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15a.csv', row.names = F)
+write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15a.csv'), row.names = F)
 
 # stat table
 stderror <- function(x) sd(x)/sqrt(length(x))
@@ -77,7 +77,7 @@ pa_stattab = mydf3 %>%
   as.data.frame() %>% 
   mutate(n = paste0('n=', n),
          lactate_quartile = paste0('Q', lactate_quartile)) 
-xlsx::write.xlsx(pa_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15a.xlsx')
+xlsx::write.xlsx(pa_stattab, file.path(table_out_dir, 'stat_table_sfig15a.xlsx'))
 
 vars = c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio')
 # var = vars[1]
@@ -88,7 +88,7 @@ for (var in vars){
 }
 
 
-## panel b
+## Panel B ####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'significances')))
 met_fields = c('sex', 'age_at_rec', 'PC', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
 health_fields = c('weight_change')
@@ -141,7 +141,7 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(weight_change=L1)
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15b.csv', row.names = F)
+write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15b.csv'), row.names = F)
 
 # stat table
 stderror <- function(x) sd(x)/sqrt(length(x))n = n()
@@ -158,7 +158,7 @@ pb_stattab = mydf3 %>%
                              c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
   mutate(n=paste0('n=', n)) %>% 
   as.data.frame()
-xlsx::write.xlsx(pb_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15b.xlsx')
+xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig15b.xlsx'))
 
 
 mydf4=mydf3 %>% drop_na
@@ -172,9 +172,10 @@ for (var in vars){
 }
 
 
-## panel c-d
+## Panel C-D ####
 rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'pb', 'significances')))
-illness_codes = read.delim('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/illness_codings.tsv')
+illness_codes = read.delim(file.path(project_dir, 'data', 'illness_codings.tsv'))
+
 diabetes_codes = illness_codes %>% 
   filter(startsWith(meaning, 'E10') | startsWith(meaning, 'E11') | startsWith(meaning, 'E12') | startsWith(meaning, 'E13') | startsWith(meaning, 'E14')) %>% 
   filter(selectable == 'Y') %>% 
@@ -255,7 +256,7 @@ mydf3_save = lapply(smydf3, function(df){
 }) %>%
   melt(measure.vars=c()) %>% 
   rename(diabetes=L1)
-write.csv(mydf3_save, file = '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/fs15cd.csv', row.names = F)
+write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15cd.csv'), row.names = F)
 
 stderror <- function(x) sd(x)/sqrt(length(x))
 pc_stattab = mydf3 %>% 
@@ -276,16 +277,11 @@ pc_stattab = mydf3 %>%
   mutate(n = paste0('n=', n)) %>% 
   data.frame() %>% 
   arrange(variable)
-xlsx::write.xlsx(pc_stattab, '/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/tables/stat_table_sfig15c.xlsx')
+xlsx::write.xlsx(pc_stattab, file.path(table_out_dir, 'stat_table_sfig15c.xlsx'))
 
-for (var in c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')){
-  v1 = mydf3 %>% filter(diabetes=='healthy') %>% pull(var)
-  v2 = mydf3 %>% filter(diabetes=='patients') %>% pull(var)
-  print(var)
-  print(wilcox.test(v1, v2, paired=F))
-  cat('\n')
-}
 
-#combine plots
+## Final plot ####
 p = ggarrange(pa,pb,pc,ncol=1, heights=c(1,1.4,1.8))
-ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/figureS15_final.pdf', p, width=8, height=8)
+ggsave(file.path(figure_out_dir, figureS15_final.pdf), p, width=8, height=8)
+
+

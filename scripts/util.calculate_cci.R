@@ -3,7 +3,7 @@ library(reshape2)
 library(tidyverse)
 library(comorbidity)
 
-source(./files.R)
+source('scripts/files.R')
 
 # get field_ids for icd-10 illnesses
 illnesses = metadf %>% 

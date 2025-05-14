@@ -1,11 +1,7 @@
-# plat basics of the data (i.e., age dist, sex, vs.)
 library(tidyverse)
 
-source('./files.R')
-#mydf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_final.rds')
-#mymetadf = readRDS('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/data/processed/ukb678748_subset_df_all_columns.rds')
+source('scripts/files.R')
 
-# age dist
 cols = mymetadf %>% 
   filter(name %in% c('sex', 'age_at_rec')) %>% 
   select(field_id, name)
@@ -27,6 +23,6 @@ mydf2 %>%
   xlab('Age interval') +
   ylab('Num. of individuals') +
   ggtitle('Age distribution')
-#ggsave('/scratch/shire/data/biobank/ukbb_immunosenescence/mt-aging/results/figures/age_dist.png', width=8, height=4)
+
 ggsave(files.path(figure_out_dir, 'age_dist.png'), width=8, height=4)
 
