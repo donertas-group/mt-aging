@@ -1,6 +1,7 @@
 library(tidyverse)
 library(reshape2)
 library(ggpubr)
+library(patchwork)
 
 source('scripts/files.R')
 
@@ -37,7 +38,6 @@ pa_stattab = pa$data %>%
 xlsx::write.xlsx(pa_stattab, file.path(table_out_dir, 'stat_table_sfig14a.xlsx'))
 
 # Panel B #####
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa')))
 fields = c('sex', 'age_at_rec', 'POFA', 'MOFA', 'SFA', 'POFA_MOFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio', 'SFA_Total_Ratio', 'TFA')
 cols = mymetadf %>% 
   filter(name %in% fields) %>% 
@@ -108,6 +108,6 @@ pb_stattab = mydf2 %>%
 xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig14b.xlsx'))
 
 
-p = ggarrange(pa, pb, nrow=2, heights = c(1, 1.2))
-ggsave(file.path(figure_out_dir, 'figureS14.pdf '), p, width=8, height=6)
+p = ggarrange(pa + plot_annotation(title='(a)'), pb + plot_annotation(title='(b)'), nrow=2, heights = c(1, 1.2))
+ggsave(file.path(figure_out_dir, 'figureS14.pdf'), p, width=8, height=6)
 

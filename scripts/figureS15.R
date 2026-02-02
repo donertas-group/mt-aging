@@ -1,12 +1,36 @@
 library(tidyverse)
 library(reshape2)
 library(ggsignif)
+library(patchwork)
 
 source('scripts/files.R')
 
 significances = c("****"=0.0001, "***"=0.001, "**"=0.01, "*"=0.05)
 
-## Panel A ####
+## Panel A- distribution of lactate levels
+fields = c('age_at_rec', 'Lactate')
+cols = mymetadf %>% 
+  filter(name %in% fields) %>% 
+  select(field_id, name)
+
+mydf2 = mydf %>% select(cols$field_id) 
+colnames(mydf2) = setNames(cols$name, cols$field_id)[colnames(mydf2)]
+
+mydf3 = mydf2 %>% 
+  select(Lactate, age_at_rec) %>% 
+  drop_na()
+
+pa = mydf3 %>% 
+  ggplot(aes(x=Lactate)) +
+  geom_histogram(color='gray80', fill='lightblue4') +
+  geom_vline(xintercept = quantile(mydf3$Lactate, probs = c(.25)), linetype=2, color='gray25') +
+  annotate("text", x=2.9, y=4800, label = "Q1") +
+  annotate("text", x=4.8, y=4500, label = "Q4") +
+  geom_vline(xintercept = quantile(mydf3$Lactate, probs = c(.75)), linetype=2, color='gray25') +
+  theme_bw() +
+  labs(x='Lactate levels (mmol/l)', y='Count')
+
+## Panel B ####
 fields = c('age_at_rec', 'POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio', 'Lactate')
 cols = mymetadf %>% 
   filter(name %in% fields) %>% 
@@ -22,7 +46,7 @@ mydf3 = mydf2 %>%
   select(-Lactate, -age_at_rec) %>%
   drop_na()
   
-pa = 
+pb = 
   mydf3 %>% 
   melt(id.vars=c('lactate_quartile')) %>%
   drop_na() %>% 
@@ -45,51 +69,50 @@ pa =
         strip.placement = "outside") +
   xlab('Lactate Quartile') + ylab(' ')
 
-#calculate density estimates for boxplots
-smydf3 = split(mydf3, as.character(mydf3$lactate_quartile))
-mydf3_save = lapply(smydf3, function(df){
-  data.frame('value.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$x,
-             'density_est.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$y,
-             
-             'value.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$x,
-             'density_est.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$y,
-             
-             'value.sfa_tfa_ratio' = density(df$SFA_Total_Ratio)$x,
-             'density_est.sfa_tfa_ratio' = density(df$SFA_Total_Ratio)$y)
-}) %>%
-  melt(measure.vars=c()) %>% 
-  rename(lactate_quartile=L1)
-write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15a.csv'), row.names = F)
+# #calculate density estimates for boxplots
+# smydf3 = split(mydf3, as.character(mydf3$lactate_quartile))
+# mydf3_save = lapply(smydf3, function(df){
+#   data.frame('value.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$x,
+#              'density_est.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$y,
+#              
+#              'value.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$x,
+#              'density_est.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$y,
+#              
+#              'value.sfa_tfa_ratio' = density(df$SFA_Total_Ratio)$x,
+#              'density_est.sfa_tfa_ratio' = density(df$SFA_Total_Ratio)$y)
+# }) %>%
+#   melt(measure.vars=c()) %>% 
+#   rename(lactate_quartile=L1)
+# write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15a.csv'), row.names = F)
 
-# stat table
-stderror <- function(x) sd(x)/sqrt(length(x))
-pa_stattab = mydf3 %>% 
-  drop_na() %>% 
-  melt(id.vars=c('lactate_quartile')) %>% 
-  group_by(lactate_quartile, variable) %>% 
-  summarise(
-    n = n(),
-    mean = mean(value),
-    sem = stderror(value)
-  ) %>% 
-  mutate(variable = setNames(c('PUFA/MUFA Ratio', 'SFA/TFA Ratio', 'MUFA/TFA Ratio'),
-                             c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
-  as.data.frame() %>% 
-  mutate(n = paste0('n=', n),
-         lactate_quartile = paste0('Q', lactate_quartile)) 
-xlsx::write.xlsx(pa_stattab, file.path(table_out_dir, 'stat_table_sfig15a.xlsx'))
+# # stat table
+# stderror <- function(x) sd(x)/sqrt(length(x))
+# pa_stattab = mydf3 %>% 
+#   drop_na() %>% 
+#   melt(id.vars=c('lactate_quartile')) %>% 
+#   group_by(lactate_quartile, variable) %>% 
+#   summarise(
+#     n = n(),
+#     mean = mean(value),
+#     sem = stderror(value)
+#   ) %>% 
+#   mutate(variable = setNames(c('PUFA/MUFA Ratio', 'SFA/TFA Ratio', 'MUFA/TFA Ratio'),
+#                              c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
+#   as.data.frame() %>% 
+#   mutate(n = paste0('n=', n),
+#          lactate_quartile = paste0('Q', lactate_quartile)) 
+# xlsx::write.xlsx(pa_stattab, file.path(table_out_dir, 'stat_table_sfig15a.xlsx'))
+# 
+# vars = c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio')
+# # var = vars[1]
+# for (var in vars){
+#   v1 = filter(mydf3, lactate_quartile == 1) %>% pull(var)
+#   v2 = filter(mydf3, lactate_quartile == 4) %>% pull(var)
+#   print(wilcox.test(v1, v2, paired=F))
+# }
 
-vars = c('POFA_MOFA_Ratio', 'SFA_Total_Ratio', 'MOFA_Total_Ratio')
-# var = vars[1]
-for (var in vars){
-  v1 = filter(mydf3, lactate_quartile == 1) %>% pull(var)
-  v2 = filter(mydf3, lactate_quartile == 4) %>% pull(var)
-  print(wilcox.test(v1, v2, paired=F))
-}
 
-
-## Panel B ####
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'significances')))
+## Panel C ####
 met_fields = c('sex', 'age_at_rec', 'PC', 'TFA', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
 health_fields = c('weight_change')
 
@@ -107,7 +130,7 @@ mydf3 =
   mutate(weight_change = as.character(weight_change)) %>% 
   filter(weight_change %in% c('No - weigh about the same', 'Yes - gained weight', 'Yes - lost weight')) %>% 
   mutate(weight_change = setNames(c('No change', 'Gained weight', 'Lost weight'), c('No - weigh about the same', 'Yes - gained weight', 'Yes - lost weight'))[weight_change])
-pb =
+pc =
   mydf3 %>% 
   melt(measure.vars=c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')) %>% 
   mutate(variable = setNames(c('PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio'),
@@ -127,53 +150,52 @@ pb =
         strip.placement = "outside") +
   labs(y='Weight change', x=' ')
 
-#calculate density estimates for boxplots
-smydf3 = split(mydf3, as.character(mydf3$weight_change))
-mydf3_save = lapply(smydf3, function(df){
-  data.frame('value.pc_tfa_ratio' = density(df$PC_TFA_Ratio)$x,
-             'density_est.pc_tfa_ratio' = density(df$PC_TFA_Ratio)$y,
-             
-             'value.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$x,
-             'density_est.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$y,
-             
-             'value.pufa_tfa_ratio' = density(df$POFA_Total_Ratio)$x,
-             'density_est.pufa_tfa_ratio' = density(df$POFA_Total_Ratio)$y)
-}) %>%
-  melt(measure.vars=c()) %>% 
-  rename(weight_change=L1)
-write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15b.csv'), row.names = F)
+# #calculate density estimates for boxplots
+# smydf3 = split(mydf3, as.character(mydf3$weight_change))
+# mydf3_save = lapply(smydf3, function(df){
+#   data.frame('value.pc_tfa_ratio' = density(df$PC_TFA_Ratio)$x,
+#              'density_est.pc_tfa_ratio' = density(df$PC_TFA_Ratio)$y,
+#              
+#              'value.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$x,
+#              'density_est.mufa_tfa_ratio' = density(df$MOFA_Total_Ratio)$y,
+#              
+#              'value.pufa_tfa_ratio' = density(df$POFA_Total_Ratio)$x,
+#              'density_est.pufa_tfa_ratio' = density(df$POFA_Total_Ratio)$y)
+# }) %>%
+#   melt(measure.vars=c()) %>% 
+#   rename(weight_change=L1)
+# write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15b.csv'), row.names = F)
 
-# stat table
-stderror <- function(x) sd(x)/sqrt(length(x))n = n()
-pb_stattab = mydf3 %>% 
-  drop_na() %>% 
-  melt(id.vars=c('weight_change')) %>% 
-  group_by(weight_change, variable) %>% 
-  summarise(
-    n = n(),
-    mean = mean(value),
-    sem = stderror(value)
-  ) %>% 
-  mutate(variable = setNames(c('PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio'),
-                             c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
-  mutate(n=paste0('n=', n)) %>% 
-  as.data.frame()
-xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig15b.xlsx'))
+# # stat table
+# stderror <- function(x) sd(x)/sqrt(length(x))
+# pb_stattab = mydf3 %>% 
+#   drop_na() %>% 
+#   melt(id.vars=c('weight_change')) %>% 
+#   group_by(weight_change, variable) %>% 
+#   summarise(
+#     n = n(),
+#     mean = mean(value),
+#     sem = stderror(value)
+#   ) %>% 
+#   mutate(variable = setNames(c('PC/TFA Ratio', 'PUFA/TFA Ratio', 'MUFA/TFA Ratio'),
+#                              c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio'))[variable]) %>% 
+#   mutate(n=paste0('n=', n)) %>% 
+#   as.data.frame()
+# xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig15b.xlsx'))
+# 
+# 
+# mydf4=mydf3 %>% drop_na
+# vars = c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
+# for (var in vars){
+#   print(var)
+#   v1 = filter(mydf4, weight_change == 'Lost weight') %>% pull(var)
+#   v2 = filter(mydf4, weight_change == 'No change') %>% pull(var)
+#   print(wilcox.test(v1, v2, paired=F))
+#   cat('\n')
+# }
 
 
-mydf4=mydf3 %>% drop_na
-vars = c('PC_TFA_Ratio', 'POFA_Total_Ratio', 'MOFA_Total_Ratio')
-for (var in vars){
-  print(var)
-  v1 = filter(mydf4, weight_change == 'Lost weight') %>% pull(var)
-  v2 = filter(mydf4, weight_change == 'No change') %>% pull(var)
-  print(wilcox.test(v1, v2, paired=F))
-  cat('\n')
-}
-
-
-## Panel C-D ####
-rm(list=setdiff(ls(), c('mydf', 'mymetadf', 'pa', 'pb', 'significances')))
+## Panel d ####
 illness_codes = read.delim(file.path(project_dir, 'data', 'illness_codings.tsv'))
 
 diabetes_codes = illness_codes %>% 
@@ -208,7 +230,7 @@ mydf3 = mydf2 %>%
   replace_na(list(diabetes='healthy')) %>% 
   select(-POFA_Total_Ratio, -TFA, -f.eid, -sex)
 
-pc = mydf3 %>% 
+pd = mydf3 %>% 
   melt(measure.vars=c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio')) %>% 
   mutate(variable = setNames(c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'),
                              c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))[variable]) %>% 
@@ -231,57 +253,62 @@ pc = mydf3 %>%
   xlab("") + ylab(' ')
 
 
-# calculate density estimates for boxplots
-smydf3 = split(mydf3, as.character(mydf3$diabetes))
-mydf3_save = lapply(smydf3, function(df){
-  data.frame('value.age' = density(df$age_at_rec)$x,
-             'density_est.age' = density(df$age_at_rec)$y,
-             
-             'value.pc' = density(df$PC)$x,
-             'density_est.pc' = density(df$PC)$y,
-             
-             'value.pufa' = density(df$POFA)$x,
-             'density_est.pufa' = density(df$POFA)$y,
-             
-             'value.mufa' = density(df$MOFA)$x,
-             'density_est.mufa' = density(df$MOFA)$y,
-             
-             
-             'value.mufa_total_ratio' = density(df$MOFA_Total_Ratio)$x,
-             'density_est.mufa_total_ratio' = density(df$MOFA_Total_Ratio)$y,
-             
-             'value.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$x,
-             'density_est.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$y
-             )
-}) %>%
-  melt(measure.vars=c()) %>% 
-  rename(diabetes=L1)
-write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15cd.csv'), row.names = F)
-
-stderror <- function(x) sd(x)/sqrt(length(x))
-pc_stattab = mydf3 %>% 
-  melt(id.vars=c('diabetes')) %>% 
-  mutate(variable = setNames(c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'),
-                             c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))[variable]) %>% 
-  mutate(diabetes = gsub('patients', 'Diabetic', diabetes),
-         diabetes = gsub('healthy', 'Non-diabetic', diabetes),
-         diabetes = factor(diabetes, levels=c('Non-diabetic', 'Diabetic')),
-         variable = factor(variable, levels=c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'))) %>% 
-  drop_na() %>% 
-  group_by(diabetes, variable) %>% 
-  summarise(
-    n = n(),
-    mean = mean(value),
-    sem = stderror(value)
-  ) %>% 
-  mutate(n = paste0('n=', n)) %>% 
-  data.frame() %>% 
-  arrange(variable)
-xlsx::write.xlsx(pc_stattab, file.path(table_out_dir, 'stat_table_sfig15c.xlsx'))
-
+# # calculate density estimates for boxplots
+# smydf3 = split(mydf3, as.character(mydf3$diabetes))
+# mydf3_save = lapply(smydf3, function(df){
+#   data.frame('value.age' = density(df$age_at_rec)$x,
+#              'density_est.age' = density(df$age_at_rec)$y,
+#              
+#              'value.pc' = density(df$PC)$x,
+#              'density_est.pc' = density(df$PC)$y,
+#              
+#              'value.pufa' = density(df$POFA)$x,
+#              'density_est.pufa' = density(df$POFA)$y,
+#              
+#              'value.mufa' = density(df$MOFA)$x,
+#              'density_est.mufa' = density(df$MOFA)$y,
+#              
+#              
+#              'value.mufa_total_ratio' = density(df$MOFA_Total_Ratio)$x,
+#              'density_est.mufa_total_ratio' = density(df$MOFA_Total_Ratio)$y,
+#              
+#              'value.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$x,
+#              'density_est.pufa_mufa_ratio' = density(df$POFA_MOFA_Ratio)$y
+#              )
+# }) %>%
+#   melt(measure.vars=c()) %>% 
+#   rename(diabetes=L1)
+# write.csv(mydf3_save, file = file.path(table_out_dir, 'fs15cd.csv'), row.names = F)
+# 
+# stderror <- function(x) sd(x)/sqrt(length(x))
+# pc_stattab = mydf3 %>% 
+#   melt(id.vars=c('diabetes')) %>% 
+#   mutate(variable = setNames(c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'),
+#                              c('age_at_rec', 'PC', 'POFA', 'MOFA', 'MOFA_Total_Ratio', 'POFA_MOFA_Ratio'))[variable]) %>% 
+#   mutate(diabetes = gsub('patients', 'Diabetic', diabetes),
+#          diabetes = gsub('healthy', 'Non-diabetic', diabetes),
+#          diabetes = factor(diabetes, levels=c('Non-diabetic', 'Diabetic')),
+#          variable = factor(variable, levels=c('Age', 'PC', 'PUFA', 'MUFA', 'MUFA/TFA Ratio', 'PUFA/MUFA Ratio'))) %>% 
+#   drop_na() %>% 
+#   group_by(diabetes, variable) %>% 
+#   summarise(
+#     n = n(),
+#     mean = mean(value),
+#     sem = stderror(value)
+#   ) %>% 
+#   mutate(n = paste0('n=', n)) %>% 
+#   data.frame() %>% 
+#   arrange(variable)
+# xlsx::write.xlsx(pc_stattab, file.path(table_out_dir, 'stat_table_sfig15c.xlsx'))
+# 
 
 ## Final plot ####
-p = ggarrange(pa,pb,pc,ncol=1, heights=c(1,1.4,1.8))
-ggsave(file.path(figure_out_dir, figureS15_final.pdf), p, width=8, height=8)
+
+p = ggarrange(pa+plot_annotation(title='(a)'),
+              pb+plot_annotation(title='(b)'),
+              pc+plot_annotation(title='(c)'),
+              pd+plot_annotation(title='(d)'),ncol=1, heights=c(1.5,1,1.4,1.8))
+
+ggsave(file.path(figure_out_dir, 'figureS15_final.pdf'), p, width=8, height=12)
 
 
