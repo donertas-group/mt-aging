@@ -1,0 +1,10 @@
+# GTEx data
+All data files are saved as ./data/processed/all.RData 
+
+## METHOD STATEMENT
+
+We analyzed PEMT expression and age-related variations across tissues using the GTEx dataset (v8) [ref: https://www.nature.com/articles/ng.2653] and preprocessed data from Donertas et al 2021 [ref: https://www.nature.com/articles/s43587-021-00051-5]. This data incorporated individuals with Hardy Scale scores 1 and 2, filtered out genes with a median TPM below 1, applied log2 transformation, and quantile normalized the dataset after correcting for sex and death circumstances using a linear model. Samples deviating more than 3 standard deviations from the first four principal components were considered outliers and excluded. Preprocessing scripts are available in github https://github.com/mdonertas/aging_in_GTEx_v8. Age-related expression changes were calculated using Spearman's correlation for individuals for tissue-age pairs with more than five samples. Tissues with high PEMT expression were determined by computing mean TPM values, following the  method employed in GTEx data portal but restricting data to same individuals used in our main analysis (i.e. excluding slow death and ventilator cases and outliers). All resources, including code, processed data, and results, can be accessed at https://github.com/mdonertas/pc_synthesis_human_aging.
+
+## SOFTWARE
+
+All analysis is done using R, session information with versions and packages used/loaded in the namespace are available at the end of the script file.
