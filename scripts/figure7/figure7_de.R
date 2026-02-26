@@ -26,7 +26,8 @@ mydf3=mydf2 %>%
   transmute(lactate_quartile, PC_TFA_Ratio, PUFA_Total_Ratio=POFA_Total_Ratio) %>% 
   drop_na() 
 
-pd1 = mydf3 %>% 
+pd1 =
+  mydf3 %>% 
   ggplot(aes(x=lactate_quartile, y=PC_TFA_Ratio, fill=lactate_quartile)) +
   geom_boxplot(alpha=.9, outlier.size=.3) +
   geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = significances) +
@@ -42,7 +43,8 @@ pd1 = mydf3 %>%
         plot.margin = margins) +
   xlab('Lactate Quartile') + ylab('PC/TFA Ratio')
 
-pd2=mydf3 %>% 
+pd2=
+  mydf3 %>% 
   ggplot(aes(x=lactate_quartile, y=PUFA_Total_Ratio, fill=lactate_quartile)) +
   geom_boxplot(alpha=.9, outlier.size=.3) +
   geom_signif(test="wilcox.test", comparisons = list(c('4', '1')), map_signif_level = significances) +

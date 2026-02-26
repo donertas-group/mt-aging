@@ -22,4 +22,8 @@ pa =
   plot_annotation(title='(a)') +
   theme(plot.margin = margins, axis.text.x = element_text(size=10))
 
+padat %>% 
+  group_by(abv3q) %>% 
+  count()
+
 saveRDS(pa, file.path(figure_out_dir, 'figure7', 'figure7_a.rds'))

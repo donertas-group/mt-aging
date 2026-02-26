@@ -110,4 +110,10 @@ xlsx::write.xlsx(pb_stattab, file.path(table_out_dir, 'stat_table_sfig14b.xlsx')
 
 p = ggarrange(pa + plot_annotation(title='(a)'), pb + plot_annotation(title='(b)'), nrow=2, heights = c(1, 1.2))
 ggsave(file.path(figure_out_dir, 'figureS14.pdf'), p, width=8, height=6)
-
+ggsave(file.path(figure_out_dir, 'figureS14_v1.pdf'), p, width = 8.27, height = 7, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v2.pdf'), p, width = 8.27, height = 7.5, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v3.pdf'), p, width = 8.27, height = 8, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v4.pdf'), p, width = 8.27, height = 8.5, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v5.pdf'), p, width = 8.27, height = 9, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v6.pdf'), p, width = 8.27, height = 9.5, units = "in")
+ggsave(file.path(figure_out_dir, 'figureS14_v7.pdf'), p, width = 8.27, height = 10, units = "in")

@@ -20,4 +20,9 @@ pb = pbdat %>%
   plot_annotation(title='(b)') +
   theme(plot.margin = margins)
 
+pbdat %>% 
+  group_by(age) %>% 
+  count() %>% 
+  pull(n) %>% sum
+
 saveRDS(pb, file.path(figure_out_dir, 'figure7', 'figure7_b.rds'))
